@@ -32,7 +32,7 @@ imgBackground=cv2.imread("background.png")
 COL_NAMES = ['NAME', 'TIME']
 
 while True:
-    ret,frame=video.read()
+    ret,frame=video.read()q
     frame = cv2.flip(frame,1)
     gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces=facedetect.detectMultiScale(gray, 1.3 ,5)
