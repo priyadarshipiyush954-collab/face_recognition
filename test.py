@@ -15,7 +15,7 @@ def speak(str1):
     speak.Speak(str1)
 
 video=cv2.VideoCapture(0)
-facedetect=cv2.CascadeClassifier('data/haarcascade_frontalface_default.xml')
+facedetect = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")   
 
 with open('data/names.pkl', 'rb') as w:
     LABELS=pickle.load(w)
@@ -33,6 +33,7 @@ COL_NAMES = ['NAME', 'TIME']
 
 while True:
     ret,frame=video.read()
+    frame = cv2.flip(frame,1)
     gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces=facedetect.detectMultiScale(gray, 1.3 ,5)
     for (x,y,w,h) in faces:
@@ -49,8 +50,8 @@ while True:
         cv2.putText(frame, str(output[0]), (x,y-15), cv2.FONT_HERSHEY_COMPLEX, 1, (255,255,255), 1)
         cv2.rectangle(frame, (x,y), (x+w, y+h), (50,50,255), 1)
         attendance=[str(output[0]), str(timestamp)]
-    imgBackground[162:162 + 480, 55:55 + 640] = frame
-    cv2.imshow("Frame",imgBackground)
+    #imgBackground[162:162 + 480, 55:55 + 640] = frame
+    cv2.imshow("Frame", frame)
     k=cv2.waitKey(1)
     if k==ord('o'):
         speak("Attendance Taken..")
