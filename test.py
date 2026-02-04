@@ -6,34 +6,59 @@ import os
 import csv
 import time
 from datetime import datetime
-
-
 from win32com.client import Dispatch
 
 def speak(str1):
     speak=Dispatch(("SAPI.SpVoice"))
     speak.Speak(str1)
 
+# --- 1. SETUP CAMERA & DETECTOR (Fixed Path) ---
 video=cv2.VideoCapture(0)
-facedetect = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")   
+# This uses the internal cv2 path so it always finds the file
+facedetect = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
+# --- 2. LOAD DATA ---
 with open('data/names.pkl', 'rb') as w:
-    LABELS=pickle.load(w)
+    LABELS = pickle.load(w)
 with open('data/faces_data.pkl', 'rb') as f:
-    FACES=pickle.load(f)
+    FACES = pickle.load(f)
 
-print('Shape of Faces matrix --> ', FACES.shape)
+print(f'Shape of Faces matrix --> {FACES.shape}')
+print(f'Count of Names --> {len(LABELS)}')
 
+# --- 3. AUTO-REPAIR (The Fix for your Error) ---
+# This block checks if the counts mismatch and fixes the files permanently
+if len(LABELS) != FACES.shape[0]:
+    print(f"⚠️ DATA MISMATCH DETECTED! Names: {len(LABELS)}, Faces: {FACES.shape[0]}")
+    
+    if len(LABELS) > FACES.shape[0]:
+        print("-> Fixing: Trimming extra names...")
+        LABELS = LABELS[:FACES.shape[0]]
+        # Save the fixed list back to file so add_faces.py works correctly next time
+        with open('data/names.pkl', 'wb') as w:
+            pickle.dump(LABELS, w)
+            
+    elif FACES.shape[0] > len(LABELS):
+        print("-> Fixing: Trimming extra faces...")
+        FACES = FACES[:len(LABELS)]
+        # Save the fixed faces back to file
+        with open('data/faces_data.pkl', 'wb') as f:
+            pickle.dump(FACES, f)
+            
+    print("✅ files synchronized. Resuming...")
+
+# --- 4. TRAIN MODEL ---
 knn=KNeighborsClassifier(n_neighbors=5)
 knn.fit(FACES, LABELS)
-
-imgBackground=cv2.imread("background.png")
 
 COL_NAMES = ['NAME', 'TIME']
 
 while True:
     ret,frame=video.read()
-    frame = cv2.flip(frame,1)
+    
+    # --- FIX 1: Flip the camera so it's not inverted ---
+    frame = cv2.flip(frame, 1) 
+    
     gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces=facedetect.detectMultiScale(gray, 1.3 ,5)
     for (x,y,w,h) in faces:
@@ -50,8 +75,10 @@ while True:
         cv2.putText(frame, str(output[0]), (x,y-15), cv2.FONT_HERSHEY_COMPLEX, 1, (255,255,255), 1)
         cv2.rectangle(frame, (x,y), (x+w, y+h), (50,50,255), 1)
         attendance=[str(output[0]), str(timestamp)]
-    #imgBackground[162:162 + 480, 55:55 + 640] = frame
+    
+    # --- FIX 2: Show FRAME directly (No Background Image) ---
     cv2.imshow("Frame", frame)
+    
     k=cv2.waitKey(1)
     if k==ord('o'):
         speak("Attendance Taken..")
